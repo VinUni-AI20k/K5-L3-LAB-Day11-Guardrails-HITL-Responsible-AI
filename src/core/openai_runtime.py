@@ -49,7 +49,7 @@ class OpenAIRunner:
     def _client(self):
         from openai import OpenAI
 
-        return OpenAI(**(self.client_kwargs or {}))
+        return OpenAI(timeout=45.0, max_retries=2, **(self.client_kwargs or {}))
 
     async def chat(self, agent: OpenAIAgent, user_message: str) -> str:
         for hook in self.input_hooks:
@@ -69,6 +69,7 @@ class OpenAIRunner:
                 {"role": "user", "content": user_message},
             ],
             temperature=self.temperature,
+            max_tokens=512,
         )
         text = (completion.choices[0].message.content or "").strip()
 

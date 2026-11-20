@@ -1,3 +1,19 @@
+> **Bài nộp:** Trần Quang Minh · MSSV **2A202603929** · **K5-L3B**
+>
+> Chạy bằng Python 3.12: tạo `.venv`, cài `requirements.txt`, điền key trong `.env`.
+> `python src/main.py --part 2` kiểm tra guardrails offline; `--part 3` chạy Blue;
+> `--part 4` chạy Red và Red Advance. Tự kiểm: `python -m pytest tests -q`.
+> Sinh báo cáo: `python scripts/grade.py --submission-dir . --out outputs/grade_report.json`.
+> Mỗi lần chạy CP3 gọi lại Blue, không dùng audit cũ làm cache. Lỗi API tạm thời
+> được retry tối đa hai lần. Nếu vẫn gặp 504, chạy lại `--part 3` khi dịch vụ phục hồi;
+> chỉ nộp sau khi lệnh hoàn tất và sinh `outputs/results.json` hợp lệ.
+>
+> Audit và monitoring là observer bên ngoài plugin để ghi cả yêu cầu bị chặn sớm.
+> Audit che secret/PII trước khi ghi. Egress dùng exact host `api.vinbank.example`,
+> HTTPS, port 443 hoặc mặc định; kiểm tra payload bằng code.
+> Các prompt CP4 được thiết kế theo năm giả thuyết: completion, chuyển định dạng,
+> kể chuyện, xác nhận và phân rã nhiệm vụ. Cần đọc, điều chỉnh và chạy lại trước khi nộp.
+
 # Day 11 — Controlled Agent Security (2026)
 
 > 👤 **Hình thức:** bài tập **cá nhân** (1 người / 1 MSSV).  
