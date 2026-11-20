@@ -235,13 +235,15 @@ def _model_entry(provider: str, model: str) -> dict:
             "engine": "openai",
             "model": model,
             "api_key_env_var": "GOOGLE_API_KEY",
-            "parameters": {"base_url": GEMINI_OPENAI_BASE_URL},
+            "parameters": {"base_url": GEMINI_OPENAI_BASE_URL,
+                           "timeout": 45, "max_retries": 0},
         }
     return {
         "type": "main",
         "engine": "openai",
         "model": model,
         "api_key_env_var": "OPENAI_API_KEY",
+        "parameters": {"timeout": 45, "max_retries": 0},
     }
 
 

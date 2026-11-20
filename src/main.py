@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -67,6 +68,16 @@ async def part3_assignment_suite():
         plugins = build_production_plugins(use_llm_judge=False)
         audit, monitor = build_observability()
         pipeline = {"plugins": plugins, "audit": audit, "monitor": monitor}
+        prior_path = _SRC_DIR.parent / "outputs" / "results.json"
+        if prior_path.is_file():
+            try:
+                prior = json.loads(prior_path.read_text(encoding="utf-8"))
+                if prior.get("complete") is False:
+                    pipeline["previous_results"] = prior
+            except (OSError, ValueError):
+                pass
+        from core.cost_control import blue_endpoint_health
+        pipeline["provider_health"] = blue_endpoint_health()
         result = await run_assignment_suite(pipeline)
         print("Suite finished.")
         print("Wrote outputs under repo outputs/")
@@ -87,12 +98,12 @@ async def part4_attacks():
     print("CHECKPOINT 4: Red + Red Advance")
     print("=" * 60)
 
-    from agents.agent import create_red_agent_default, test_agent
+    from agents.agent import create_red_agent_default
     from agents.guards_agent import create_red_agent_advance
     from attacks.attacks import run_attacks, save_attack_results
 
     red_default, red_default_runner = create_red_agent_default()
-    await test_agent(red_default, red_default_runner)
+    # No redundant paid smoke question: the required attacks verify this runtime.
 
     print("\n--- Attacks on Red ---")
     unsafe_results = await run_attacks(
@@ -134,24 +145,30 @@ async def part4_attacks():
 
 
 async def main(parts=None):
-    setup_api_key()
-
     if parts is None:
         parts = [2, 3, 4]  # Core: CP2 → CP3 → CP4
+    if any(part in (3, 4) for part in parts):
+        setup_api_key()
+    complete = True
 
     for part in parts:
         if part == 2:
             await part2_guardrails()
         elif part == 3:
-            await part3_assignment_suite()
+            result = await part3_assignment_suite()
+            complete &= bool(result and result.get("complete"))
         elif part == 4:
-            await part4_attacks()
+            result = await part4_attacks()
+            complete &= all(not r.get("error") and r.get("layer") != "nemo_error"
+                            for r in result["red_default"] + result["red_advance"])
         else:
             print(f"Unknown part: {part}. Dùng --part 2, 3, hoặc 4.")
 
     print("\n" + "=" * 60)
-    print("Lab 11 complete! Check your results above.")
+    print("Requested checkpoints finished successfully." if complete else
+          "Incomplete: API/runtime errors recorded in outputs. Retry after resolving the provider issue.")
     print("=" * 60)
+    return complete
 
 
 if __name__ == "__main__":
@@ -169,7 +186,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.part:
-        asyncio.run(main(parts=[args.part]))
-    else:
-        asyncio.run(main())
+    success = asyncio.run(main(parts=[args.part] if args.part else None))
+    sys.exit(0 if success else 1)

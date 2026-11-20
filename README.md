@@ -1,5 +1,57 @@
 # Day 11 — Controlled Agent Security (2026)
 
+## Bài làm — Nguyễn Đình Minh
+
+- MSSV: **2A202603867** · Lớp **K5-L3B**.
+- Tên repo theo `SUBMISSION.md`: `K5-L3B-DAY11-NguyenDinhMinh-2A202603867-Guardrails-HITL-Responsible-AI`.
+- Blue: OpenRouter `liquid/lfm-3-1.7b:free` (giữ cố định).
+- Red và Red Advance: Gemini `gemini-3.5-flash`, dùng chung `GOOGLE_API_KEY`.
+- Bonus chọn **B1** (Red, tối đa +5, phụ thuộc grader replay); không săn B2 để tiết kiệm quota.
+
+### Cách chạy bài làm
+
+Chạy tại gốc repo, sau khi kích hoạt `.venv` và điền key trong `.env`:
+
+```bash
+python -m pytest tests/smoke tests/public tests/local -q
+python src/main.py --part 2
+python src/main.py --part 3
+python src/main.py --part 4
+python scripts/grade.py --submission-dir . --out outputs/grade_report.json
+```
+
+Tests và CP2 không gọi API. CP3 dự kiến chỉ 5 lượt LLM cho 5 câu banking an toàn;
+7 câu tấn công và 3 case biên bị chặn trước LLM. Stress rate limit chạy 15 request
+off-topic qua đầy đủ pipeline: 10 qua rate gate rồi bị input guardrail chặn, 5 bị rate
+gate chặn; không tốn lượt LLM. `passed`/`blocked` trong `rate_limit` đếm riêng rate gate.
+Dataset PII và egress kiểm tra cục bộ, được phân biệt với câu trả lời LLM thật.
+
+CP4 gửi 5 prompt lên Red rồi cùng 5 prompt lên Red Advance. Không chạy câu hỏi
+smoke trả phí dư thừa, Judge, AI-generated attacks hoặc model khó. Red Advance giữ nguyên
+regex + NeMo; prompt bị regex chặn sẽ không gọi self-check hay LLM.
+`BLUE_MAX_OUTPUT_TOKENS` / `RED_MAX_OUTPUT_TOKENS` mặc định 768 cho mỗi lượt model chính;
+SDK model chính không tự retry. Đây là trần đầu ra, không phải trần tổng input/output.
+
+Nếu CP3 dừng do API lỗi, lần chạy sau giữ lại câu trả lời Blue thật đã thành công
+trong `results.json` chưa hoàn tất, khi model/provider và câu hỏi vẫn khớp. Kết quả
+được đánh dấu `reused`, kiểm tra lại guardrails hiện tại và không tính là lượt gọi
+API mới. Câu còn lỗi mới được gửi tiếp; không tái sử dụng preview bị cắt ngắn.
+
+Red dùng endpoint tương thích OpenAI chính thức của Google với cùng key/model Gemini;
+Red Advance giữ ADK + regex + NeMo. NeMo có timeout 45 giây và không tự retry;
+timeout/lỗi vẫn chặn theo fail-closed. Nếu API lỗi, kết quả ghi rõ `error` và
+`complete: false`, các request tiếp theo của target đó không gửi để giữ quota.
+
+Audit và monitoring là side observers để ghi cả request bị chặn trước LLM. Input được
+chuẩn hóa Unicode và lọc injection/topic; output che PII/secret; egress kiểm tra HTTPS,
+hostname chính xác và nội dung nhạy cảm bằng code. Không thực hiện chuyển tiền thật.
+
+Hai artifact bắt buộc: `outputs/results.json`, `outputs/attack_results.json`.
+Các log chi tiết và báo cáo tự sinh cũng nằm trong `outputs/`; báo cáo được tạo bởi
+`scripts/grade.py`, không viết tay. Không đưa `.env`, `.venv` hoặc key thật vào bài nộp.
+
+---
+
 > 👤 **Hình thức:** bài tập **cá nhân** (1 người / 1 MSSV).  
 > 🎯 **Mục tiêu:** đóng vai **Blue Team** để học cách xây Guardrails phòng thủ, rồi đóng vai **Red Team** để tấn công agent **Red** hoặc **Red Advance**.  
 > ✅ Làm theo **Checkpoint 1 → 5** trong [`CHECKPOINTS.md`](CHECKPOINTS.md) · nộp theo [`SUBMISSION.md`](SUBMISSION.md).

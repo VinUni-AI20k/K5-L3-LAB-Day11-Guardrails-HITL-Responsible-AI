@@ -44,6 +44,7 @@ from agents.security_boundary import (
 from agents.red_advance_nemo import NemoRailsGuard, nemo_layer_label
 from core.config import ALLOWED_TOPICS, BLOCKED_TOPICS, DEMO_SECRETS, DEMO_SECRET_NOTE
 from core.utils import chat_with_agent
+from core.cost_control import gemini_generation_config, gemini_model
 
 # Secrets embedded in the Red Advance system prompt
 # (same values as Blue + Red).
@@ -397,9 +398,10 @@ def create_red_agent_advance():
 
     if red_uses_gemini():
         agent = llm_agent.LlmAgent(
-            model=advance_model,
+            model=gemini_model(advance_model),
             name="red_agent_advance",
             instruction=RED_ADVANCE_INSTRUCTION,
+            generate_content_config=gemini_generation_config(),
         )
         runner = runners.InMemoryRunner(
             agent=agent,

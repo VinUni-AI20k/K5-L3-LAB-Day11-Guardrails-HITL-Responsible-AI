@@ -48,9 +48,15 @@ async def chat_with_agent(agent, runner, user_message: str, session_id=None):
     async for event in runner.run_async(
         user_id=user_id, session_id=session.id, new_message=content
     ):
+        usage = getattr(event, "usage_metadata", None)
+        if usage is not None:
+            from core.cost_control import GEMINI_USAGE
+            GEMINI_USAGE.append({"agent": agent.name, "usage": usage.model_dump(exclude_none=True)})
         if hasattr(event, "content") and event.content and event.content.parts:
             for part in event.content.parts:
-                if hasattr(part, "text") and part.text:
+                if hasattr(part, "text") and part.text and not getattr(part, "thought", False):
                     final_response += part.text
 
+    if not final_response.strip():
+        raise RuntimeError("Model returned no visible reply; no successful result recorded")
     return final_response, session
